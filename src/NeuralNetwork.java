@@ -1,16 +1,23 @@
+import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.nio.file.Files.lines;
 
 /**
  * Created by ej on 4/21/2017.
  */
 public class NeuralNetwork {
 
-    final static int IMG_WIDTH = 28;
-    final static int IMG_HEIGHT = 28;
+    final static int IMG_WIDTH = 8;
+    final static int IMG_HEIGHT = 8;
     final static int IMG_SIZE = IMG_WIDTH * IMG_HEIGHT;
-    final static int NUM_IMAGES = 10;
 
     private List<Layer> layers;
     private int inputs;
@@ -71,6 +78,12 @@ public class NeuralNetwork {
                 neuron.calculateValue(layers.get(i - 1).getNeurons()); // Calc value for each neuron given previous layer
             }
         }
+
+//        List<Neuron> outputLayer = layers.get(layers.size() - 1).getNeurons();
+//        for (Neuron n : outputLayer){
+//            System.out.print(n.getValue() + " Summed Value: " + n.outputSum + " ");
+//        }
+//        System.out.println();
     }
 
     private void backPropagate(List<Double> expected){
@@ -105,53 +118,28 @@ public class NeuralNetwork {
     public void trainNetwork(int numEpochs) throws IOException {
         for (int epoch = 0; epoch < numEpochs; epoch++){
             double sumError = 0;
-            byte[] data;
 
-            // Test 0
-            data = BinaryFileReader.readBinaryFile("data0");
-            for (int imgNum = 0; imgNum < 100; imgNum++){
+            Path path = Paths.get("optdigits.tra");
+            Stream<String> lineStream = Files.lines(path);
+            List<String[]> data = lineStream.map(s -> s.split(",")).collect(Collectors.toList());
+            for (int imgNum = 0; imgNum < data.size(); imgNum++){
+                String[] lineArray = data.get(imgNum);
+                int expectedInt = Integer.parseInt(lineArray[lineArray.length - 1]);
+                if (expectedInt > 2) continue;
+
                 List<Double> inputs = new ArrayList<>(IMG_SIZE);
                 for (int i = 0; i < IMG_SIZE; i++){
-                    inputs.add((data[i + imgNum * IMG_SIZE] & 0xff) / 255.0);
+                    inputs.add(Double.parseDouble(lineArray[i]));
                 }
                 forwardPropagate(inputs);
                 List<Neuron> outputLayer = layers.get(layers.size() - 1).getNeurons();
-                for (int i = 0; i < outputs; i++){
-                    sumError += Math.pow(zeroOutput.get(i) - outputLayer.get(i).getValue(), 2);
-                }
-                backPropagate(zeroOutput);
-                updateWeights(inputs, learningRate);
-            }
 
-            // Test 1
-            data = BinaryFileReader.readBinaryFile("data1");
-            for (int imgNum = 0; imgNum < 100; imgNum++){
-                List<Double> inputs = new ArrayList<>(IMG_SIZE);
-                for (int i = 0; i < IMG_SIZE; i++){
-                    inputs.add((data[i + imgNum * IMG_SIZE] & 0xff) / 255.0);
-                }
-                forwardPropagate(inputs);
-                List<Neuron> outputLayer = layers.get(layers.size() - 1).getNeurons();
-                for (int i = 0; i < outputs; i++){
-                    sumError += Math.pow(oneOutput.get(i) - outputLayer.get(i).getValue(), 2);
-                }
-                backPropagate(oneOutput);
-                updateWeights(inputs, learningRate);
-            }
+                List<Double> expectedOutputs = createExpectedList(expectedInt);
 
-            // Test 2
-            data = BinaryFileReader.readBinaryFile("data2");
-            for (int imgNum = 0; imgNum < 100; imgNum++){
-                List<Double> inputs = new ArrayList<>(IMG_SIZE);
-                for (int i = 0; i < IMG_SIZE; i++){
-                    inputs.add((data[i + imgNum * IMG_SIZE] & 0xff) / 255.0);
-                }
-                forwardPropagate(inputs);
-                List<Neuron> outputLayer = layers.get(layers.size() - 1).getNeurons();
                 for (int i = 0; i < outputs; i++){
-                    sumError += Math.pow(twoOutput.get(i) - outputLayer.get(i).getValue(), 2);
+                    sumError += Math.pow(expectedOutputs.get(i) - outputLayer.get(i).getValue(), 2);
                 }
-                backPropagate(twoOutput);
+                backPropagate(expectedOutputs);
                 updateWeights(inputs, learningRate);
             }
 
@@ -159,10 +147,51 @@ public class NeuralNetwork {
         }
     }
 
+    public void testNetwork() throws IOException {
+        Path path = Paths.get("optdigits.tes");
+        Stream<String> lineStream = Files.lines(path);
+        List<String[]> data = lineStream.map(s -> s.split(",")).collect(Collectors.toList());
+
+        int attempts = 0;
+        int correct = 0;
+        for (int imgNum = 0; imgNum < data.size(); imgNum++){
+            String[] lineArray = data.get(imgNum);
+
+            int expected = Integer.parseInt(lineArray[lineArray.length - 1]);
+            if (expected > 2) continue;
+            else attempts++;
+
+            List<Double> inputs = new ArrayList<>(IMG_SIZE);
+            for (int i = 0; i < IMG_SIZE; i++){
+                inputs.add(Double.parseDouble(lineArray[i]));
+            }
+            forwardPropagate(inputs);
+
+            int index = layers.get(layers.size() - 1).getHighestIndex();
+            if (index == expected)
+                correct++;
+        }
+
+        System.out.println("After testing, the neural network got " + correct + "/" + attempts + " correct.");
+    }
+
+    private List<Double> createExpectedList(int expectedInt){
+        List<Double> expected = new ArrayList<>(3);
+        for (int i = 0; i < 3; i++){
+            if (i == expectedInt)
+                expected.add(1.0);
+            else
+                expected.add(0.0);
+        }
+        return expected;
+    }
+
     public static void main(String[] args){
-        NeuralNetwork nn = new NeuralNetwork(IMG_SIZE, 3, 1, 350, 0.005);
+
+        NeuralNetwork nn = new NeuralNetwork(IMG_SIZE, 3, 1, (IMG_SIZE + 3) / 2, 0.05);
         try {
-            nn.trainNetwork(50);
+            nn.trainNetwork(200);
+            nn.testNetwork();
         } catch (IOException e) {
             e.printStackTrace();
         }

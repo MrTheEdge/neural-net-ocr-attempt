@@ -31,7 +31,7 @@ public class Layer {
 
     // Returns the index of the neuron with the highest value
     // In our case, the index directly represents the number we are trying to recognize
-    public int getHighestValue(){
+    public int getHighestIndex(){
         int maxIndex = 0;
         double maxValue = Double.MIN_VALUE;
 

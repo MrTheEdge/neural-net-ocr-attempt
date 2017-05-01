@@ -11,7 +11,7 @@ public class Neuron {
     private double biasWeight;
 
     private double value;           // Store value after going through activation function
-    private double outputSum;       // The sum of input values * weights before going through activation
+    public double outputSum;       // The sum of input values * weights before going through activation
     private double delta;           // The delta used for back propagation from output nodes
 
     public Neuron(int numInputs){
