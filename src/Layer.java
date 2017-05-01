@@ -2,12 +2,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by ej on 4/21/2017.
+ * E.J. Schroeder
+ * Matt Moellman
+ * AI Program 4
+ *
+ * A Layer is used to hold Neurons. The Layer class does not hold much logic, with the exception of updating the
+ * weights on each of its neurons. It also has a convenience method that returns the index of the highest output value,
+ * effectively giving you the answer of which digit the NN recognized.
  */
 public class Layer {
 
     private List<Neuron> neurons;
 
+    // Given the size of this layer, and how many neurons were in the previous, create the necessary number of
+    // neurons and weights for each.
     public Layer(int numNeurons, int previousLayerSize){
         neurons = new ArrayList<>(numNeurons);
 
@@ -16,6 +24,8 @@ public class Layer {
         }
     }
 
+    // Given a set of inputs and a learning rate, iterate through and update weights of neurons using their
+    // delta values.
     public void updateWeights(Layer inputs, double learningRate){
         List<Neuron> prevLayer = inputs.getNeurons();
 
